@@ -8,7 +8,6 @@ import (
 )
 
 func CreateServerAndListen(ipaddr string, port string) {
-	
 	fmt.Println("[*] Starting tcp server on [ip address:port]: ", ipaddr, ":", port)
 
 	// Join the ip address and port for a format readable by the Listen function
@@ -33,11 +32,13 @@ func CreateServerAndListen(ipaddr string, port string) {
 }
 
 // Handles the data using a reader
-func handleConnection(conn net.Conn) {
-	message, error := bufio.NewReader(conn).ReadString('\n')
+func handleConnection(connection net.Conn) {
+	message, error := bufio.NewReader(connection).ReadString('\n')
 	if error != nil {
-		fmt.Println("[-] Error getting message")
+		fmt.Println("[-] Error receiving message.")
 	}
 
-	fmt.Print("Data received: ", string(message))
+	fmt.Print("[+] Data received: ", string(message))
+
+	fmt.Fprintf(connection, "Your message was successfully received.")
 }

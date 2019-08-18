@@ -30,11 +30,11 @@ func ConnectToServer(ipaddr string, port string) {
 		// Send to socket
 		fmt.Fprintf(connection, text + "\n")
 		
-		// Llisten for reply
+		// Listen for reply
 		message, error := bufio.NewReader(connection).ReadString('\n')
 		if error != nil {
 			fmt.Println("[-] Error retrieving response from server")
 		}
-		fmt.Print("Message from server: ", message)
+		fmt.Println("[+] Message from server: ", message)
 	}
 }
