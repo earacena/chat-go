@@ -1,24 +1,43 @@
-package server
+package main
 
 import (
-       "fmt"
-       "net"
+	"bufio"
+	"fmt"
+	"strings"
+	"net"
 )
 
-func CreateServerAndListen() {
-     listener, error := net.Listen("tcp", ":8888")
-     if error != nil {
-     	fmt.Println("[-] Error creating tcp server on port 8888. ")
-     }
-     for {
-     	 connection, error := listener.Accept()
-	 if error != nil {
-	    fmt.Println("[-] Error accepting connection on port 8888 [tcp]")
-	 }
-	 go handleConnection(connection)
-     }
+func CreateServerAndListen(ipaddr string, port string) {
+	
+	fmt.Println("[*] Starting tcp server on [ip address:port]: ", ipaddr, ":", port)
+
+	// Join the ip address and port for a format readable by the Listen function
+	
+	ipWithPort := []string{ipaddr, port}
+	listener, error := net.Listen("tcp", strings.Join(ipWithPort, ":"))
+	if error != nil {
+		fmt.Println("[-] Error creating tcp server on port 8888. ")
+	}
+
+	fmt.Println("[+] Server started successfully")
+	
+	defer listener.Close()
+	// Continously wait and accept all incoming connections on port
+	for {
+		connection, error := listener.Accept()
+		if error != nil {
+			fmt.Println("[-] Error accepting connection on port 8888 [tcp]")
+		}
+		go handleConnection(connection)
+	}
 }
 
-func handleConnection(conn Conn) {
-     // protocol for data transmitted
+// Handles the data using a reader
+func handleConnection(conn net.Conn) {
+	message, error := bufio.NewReader(conn).ReadString('\n')
+	if error != nil {
+		fmt.Println("[-] Error getting message")
+	}
+
+	fmt.Print("Data received: ", string(message))
 }
