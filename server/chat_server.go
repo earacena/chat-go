@@ -22,6 +22,8 @@ func main() {
 		return
 	}
 
+	fmt.Println("[*] Listening on " + args[1] + "...")
+
 	listener, err := net.Listen("tcp", args[1])
 	if err != nil {
 		fmt.Println("[-] Error while listening on " + args[1] + ": " + err.Error())
@@ -31,21 +33,41 @@ func main() {
 
 	
 	// Continously accept connections and handle data
+	fmt.Println("[*] Accepting connections...")
 	for {
 		conn, err := listener.Accept()
 		if err != nil {
-			fmt.Println("[-] Error while accepting connection on " + args[1] + ": " +
-				err.Error())
-			return
-		}
-		data, err := bufio.NewReader(conn).ReadString('\n')
-		if err != nil {
-			fmt.Println("[-] Error while listenting on " + args[1] + err.Error())
+			fmt.Println("[-] Error accepting on" + args[1] + ": " + err.Error())
+			fmt.Println("[*] Waiting for next connection...")
 			return
 		}
 
+		go handleConnection(conn)
+	}
+}
+
+// Handles the processsing of data from connection
+// to be used as a goroutine
+func handleConnection(conn net.Conn) {
+	for {
+		data, err := bufio.NewReader(conn).ReadString('\n')
+		if err != nil {
+			fmt.Println("[-] Error receiving data -> \t" + err.Error())
+			if err.Error() == "EOF" {
+				fmt.Println("\t: Ending goroutine...")
+			} else {
+				fmt.Println("\t: Unspecified communication error, ending goroutine...")
+			}
+			return
+		}
+
+		if string(data) == "halt\n" {
+			fmt.Println("[*] Exiting...")
+			os.Exit(1)
+		}
+		
 		t := time.Now()
 		timeReceived := t.Format(time.RFC3339)
-		fmt.Print("[+] (" + timeReceived + "): " + string(data))
+		fmt.Print("[+] (" + timeReceived + ") " + string(data))
 	}
 }
