@@ -70,6 +70,14 @@ func (c *Client) sendMessage() {
 		fmt.Println("[-] Error reading string to send message -> " + err.Error())
 		return
 	}
+
+	// Close client using command "!halt"
+	if strings.Replace(string(data), "\n", "", -1) == "!halt" {
+		fmt.Println("[+] Quit command invoked, exiting...")
+		os.Exit(1)
+	}
+	
+	
 	// Send data through socket
 	data = c.clientID + " " + data + "\n" 
 	fmt.Fprintf(c.conn, data)

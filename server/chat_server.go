@@ -13,6 +13,7 @@ import (
 	"net"
 	"os"
 	"time"
+	"strings"
 )
 
 func main() {
@@ -59,11 +60,6 @@ func handleConnection(conn net.Conn) {
 				fmt.Println("\t: Unspecified communication error, ending goroutine...")
 			}
 			return
-		}
-
-		if string(data) == "halt\n" {
-			fmt.Println("[*] Exiting...")
-			os.Exit(1)
 		}
 		
 		t := time.Now()
