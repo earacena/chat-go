@@ -16,6 +16,12 @@ import (
 	"encoding/json"
 )
 
+type Server struct {
+	ipAndPort string
+	listener  net.Listener
+	conn      net.Conn
+}
+
 type Message struct {
 	ID   string
 	Body string
@@ -29,48 +35,82 @@ func main() {
 	}
 
 	fmt.Println("[*] Listening on " + args[1] + "...")
-
-	listener, err := net.Listen("tcp", args[1])
-	if err != nil {
-		fmt.Println("[-] Error while listening on " + args[1] + ": " + err.Error())
-		return
-	}
-	defer listener.Close()
-
+	server := Server { ipAndPort: args[1], } 
 	
+	server.listen()
+	defer server.listener.Close()
+
 	// Continously accept connections and handle data
 	fmt.Println("[*] Accepting connections...")
 	for {
-		conn, err := listener.Accept()
-		if err != nil {
-			fmt.Println("[-] Error accepting on" + args[1] + ": " + err.Error())
-			fmt.Println("[*] Waiting for next connection...")
-			return
-		}
-
-		go handleConnection(conn)
+		server.acceptConnections()
+		go server.handleConnection()
 	}
 }
 
 // Handles the processsing of data from connection
 // to be used as a goroutine
-func handleConnection(conn net.Conn) {
+func (s *Server) handleConnection() {
 	for {
-		data, err := bufio.NewReader(conn).ReadString('\n')
-		if err != nil {
-			fmt.Print("[-] Error receiving data -> \t" + err.Error())
-			if err.Error() == "EOF" {
-				fmt.Println("\t: Ending goroutine...")
-			} else {
-				fmt.Println("\t: Unspecified communication error, ending goroutine...")
-			}
-			return
-		}
+		data := s.receiveMessage()
+		m := s.decodeMessage([]byte(data))
+		formatMessage(m)
+	}
 
-		var m Message
-		err = json.Unmarshal([]byte(data), &m)
-		t := time.Now()
-		timeReceived := t.Format(time.RFC3339)
-		fmt.Print("[+] (" + timeReceived + ") " + m.ID + " " + m.Body + "\n")
+}
+
+func (s *Server) listen() {
+	var err error
+	s.listener, err = net.Listen("tcp", s.ipAndPort)
+	if err != nil {
+		fmt.Println("[-] Error while listening on " + s.ipAndPort + ": " + err.Error())
+		return
 	}
 }
+
+func (s *Server) acceptConnections() {
+	var err error
+	s.conn, err = s.listener.Accept()
+	if err != nil {
+		fmt.Println("[-] Error accepting on" + s.ipAndPort + ": " + err.Error())
+		fmt.Println("[*] Waiting for next connection...")
+		return
+	}
+}
+
+func (s *Server) receiveMessage() string {
+	data, err := bufio.NewReader(s.conn).ReadString('\n')
+	if err != nil {
+		fmt.Print("[-] Error receiving data -> \t" + err.Error())
+		if err.Error() == "EOF" {
+			fmt.Println("\t: Client terminated connection...")
+			os.Exit(1)
+		}
+		
+		fmt.Println("\t: Unspecified communication error, ending goroutine...")
+		return ""
+	}
+	
+	return data
+}
+
+func (s *Server) decodeMessage(encoded []byte) Message {
+	var err error
+	var m Message
+
+	err = json.Unmarshal(encoded, &m)
+	if err != nil {
+		fmt.Println("[-] Error trying to unmarshal encoded message -> ", err.Error())
+	}
+	
+	return m
+}
+
+func formatMessage(m Message) {
+	t := time.Now()
+	timeReceived := t.Format(time.RFC3339)
+	fmt.Print("[+] (" + timeReceived + ") " + m.ID + " " + m.Body + "\n")
+}
+
+
+
