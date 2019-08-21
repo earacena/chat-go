@@ -8,19 +8,19 @@ package main
 
 import (
 	"bufio"
+	"encoding/json"
 	"fmt"
 	"net"
 	"os"
 	"strings"
-	"encoding/json"
+	"io"
 )
 
 type Client struct {
-	ipAndPort  string
-	clientID   string
-	reader     *bufio.Reader
+	ipAndPort string
+	clientID  string
 	//writer     *bufio.Writer
-	conn       net.Conn
+	conn net.Conn
 }
 
 type Message struct {
@@ -32,84 +32,116 @@ func main() {
 	// Ensure program is given sufficient information
 	args := os.Args
 	if len(args) != 2 {
-		fmt.Println("[-] There must be two arguments: Ex: localhost:9999")
+		fmt.Println("[-] There must be one args: Ex: localhost:9999")
 		return
 	}
 
 	fmt.Println("[*] Starting client on " + args[1] + "...")
-	
-	// Initialize ID from user input
-	fmt.Print("[*] Please enter an ID (for example, user123): ")
-	ID, err := bufio.NewReader(os.Stdin).ReadString('\n')
-	if err != nil {
-		fmt.Println("[-] Error choosing an ID -> " + err.Error())
-		fmt.Println("[+] Using default ID (user123)...")
-		ID = "user123"
-		return
-	}
-
-	// Remove newlines to prevent delimiting bugs
-	ID = "[" + strings.Replace(ID, "\n", "", -1) + "]"
+	ID := ChooseID(bufio.NewReader(os.Stdin), false)
 
 	client := Client{
 		clientID:  ID,
 		ipAndPort: args[1],
-		reader:    bufio.NewReader(os.Stdin),
 	}
 
-	// Continously perform connection to server and send data as needed
+	var err error
 	for {
-		client.connectToServer(err)
-		client.sendMessage()
+		err = client.ConnectToServer()
+		if err != nil {
+			os.Exit(1)
+		}
+		
+		client.SendMessage(bufio.NewReader(os.Stdin))
 	}
 
 }
 
 // Connects to server
-func (c *Client) connectToServer(err error) {
+func (c *Client) ConnectToServer() error {
+	var err error
 	c.conn, err = net.Dial("tcp", c.ipAndPort)
 	if err != nil {
-		fmt.Println("[-] Error dialing to " + c.ipAndPort + ": " + err.Error())
+		fmt.Println("[-] Error dialing " + c.ipAndPort + "->\n\t" + err.Error())
 	}
+	return err
 }
 
 // Handles reading and sending message
-func (c *Client) sendMessage() {
-	// Read user input
-	fmt.Print("[Send]> ")
-	data, err := c.reader.ReadString('\n')
-	if err != nil {
-		fmt.Println("[-] Error reading string to send message -> " + err.Error())
-		return
-	}
+func (c *Client) SendMessage(r *bufio.Reader) {
+	data := ReadUserInput(r, true)
 
-	// Close client using command "!halt"
 	data = strings.Replace(string(data), "\n", "", -1)
-	if data == "!halt" {
-		fmt.Println("[+] Quit command invoked, exiting...")
+
+	invoked := CheckHaltCommand(data, false)
+	if invoked == true {
 		os.Exit(1)
 	}
-
-	// Create Message used in JSON
+	
 	m := Message{
 		ID:   c.clientID,
 		Body: data,
 	}
 
-	// Convert to JSON format
+	b := EncodeMessage(m)	
+	Send(c.conn, b)
+}
+
+func ReadUserInput(r *bufio.Reader, prompt bool) string {
+	if prompt == true {
+		fmt.Print("[Send]> ")
+	}
+	
+	data, err := r.ReadString('\n')
+	if err != nil {
+		fmt.Println("[-] Error reading string to send message -> " + err.Error())
+		return ""
+	}
+	return data
+}
+
+// Check if Halt command used
+func CheckHaltCommand(data string, silent bool) bool {
+	if silent != true {
+		if data == "!halt" {
+			fmt.Println("[+] Quit command invoked, exiting...")
+		}
+	}
+	return data == "!halt"
+}
+
+// Encode the Message struct in JSON
+func EncodeMessage(m Message) []byte {
 	b, err := json.Marshal(m)
 	if err != nil {
 		fmt.Println("[-] Error JSON encoding message -> " + err.Error())
-		return
+		return nil
 	}
-	// Send data through socket
-	// Convert JSON []byte into string for simplicity, then server converts back to []byte
-	_, err = fmt.Fprintf(c.conn, string(b) + "\n")
-	if err != nil {
-		fmt.Println("[-] Error sending message through socket -> " + err.Error())
-		return
-	}
-
-	//fmt.Println("[+] Number of bytes send: ", bytesWritten)
+	return b
 }
 
+// Send data through socket
+func Send(w io.Writer, data []byte) error {
+	// c.conn
+	_, err := fmt.Fprintf(w, string(data)+"\n")
+	if err != nil {
+		fmt.Println("[-] Error sending message through socket -> " + err.Error())
+		fmt.Println("[-] Connection with server terminated...")
+	}
+	return err
+}
+
+// Read user input and assign client ID
+func ChooseID(r *bufio.Reader, silent bool) string {
+	if silent != true {
+		fmt.Print("[*] Please enter an ID (for example, user123): ")
+	}
+	ID, err := r.ReadString('\n')
+	if err != nil {
+		fmt.Println("[-] Error choosing an ID -> " + err.Error())
+		fmt.Println("[+] Using default ID (default)...")
+		ID = "default"
+	}
+
+	ID = "[" + strings.Replace(ID, "\n", "", -1) + "]"
+	return ID
+}

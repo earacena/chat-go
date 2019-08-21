@@ -81,9 +81,9 @@ func (s *Server) acceptConnections() {
 func (s *Server) receiveMessage() string {
 	data, err := bufio.NewReader(s.conn).ReadString('\n')
 	if err != nil {
-		fmt.Print("[-] Error receiving data -> \t" + err.Error())
+		fmt.Print("[-] Error receiving data -> \t" + err.Error() + "\n")
 		if err.Error() == "EOF" {
-			fmt.Println("\t: Client terminated connection...")
+			fmt.Println("\t: Client terminated connection, exiting...")
 			os.Exit(1)
 		}
 		
