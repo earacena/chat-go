@@ -13,8 +13,13 @@ import (
 	"net"
 	"os"
 	"time"
-	"strings"
+	"encoding/json"
 )
+
+type Message struct {
+	ID   string
+	Body string
+}
 
 func main() {
 	args := os.Args
@@ -53,7 +58,7 @@ func handleConnection(conn net.Conn) {
 	for {
 		data, err := bufio.NewReader(conn).ReadString('\n')
 		if err != nil {
-			fmt.Println("[-] Error receiving data -> \t" + err.Error())
+			fmt.Print("[-] Error receiving data -> \t" + err.Error())
 			if err.Error() == "EOF" {
 				fmt.Println("\t: Ending goroutine...")
 			} else {
@@ -61,9 +66,11 @@ func handleConnection(conn net.Conn) {
 			}
 			return
 		}
-		
+
+		var m Message
+		err = json.Unmarshal([]byte(data), &m)
 		t := time.Now()
 		timeReceived := t.Format(time.RFC3339)
-		fmt.Print("[+] (" + timeReceived + ") " + string(data))
+		fmt.Print("[+] (" + timeReceived + ") " + m.ID + " " + m.Body + "\n")
 	}
 }
