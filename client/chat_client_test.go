@@ -1,3 +1,8 @@
+// Name of file: chat_client_test.go
+// Author:       Emanuel Aracena
+// Date created: August 21, 2019
+// Description:  Unit tests for chat_client.go
+
 package main
 
 import (

@@ -14,6 +14,7 @@ import (
 	"os"
 	"time"
 	"encoding/json"
+	"io"
 )
 
 type Server struct {
@@ -42,21 +43,22 @@ func main() {
 
 	// Continously accept connections and handle data
 	fmt.Println("[*] Accepting connections...")
+	
 	for {
 		server.acceptConnections()
-		go server.handleConnection()
+		go server.HandleConnection(io.Writer(os.Stdin))
 	}
 }
 
 // Handles the processsing of data from connection
 // to be used as a goroutine
-func (s *Server) handleConnection() {
+func (s *Server) HandleConnection(w io.Writer) {
 	for {
-		data := s.receiveMessage()
-		m := s.decodeMessage([]byte(data))
-		formatMessage(m)
+		data := ReceiveMessage(bufio.NewReader(s.conn), false)
+		m := DecodeMessage([]byte(data))
+		frm, _ := FormatMessage(m)
+		fmt.Fprint(w, frm)
 	}
-
 }
 
 func (s *Server) listen() {
@@ -78,23 +80,27 @@ func (s *Server) acceptConnections() {
 	}
 }
 
-func (s *Server) receiveMessage() string {
-	data, err := bufio.NewReader(s.conn).ReadString('\n')
+func ReceiveMessage(r *bufio.Reader, silent bool) string {
+	data, err := r.ReadString('\n')
 	if err != nil {
 		fmt.Print("[-] Error receiving data -> \t" + err.Error() + "\n")
 		if err.Error() == "EOF" {
-			fmt.Println("\t: Client terminated connection, exiting...")
+			if silent != true {
+				fmt.Println("\t: Client terminated connection, exiting...")
+			}
 			os.Exit(1)
 		}
-		
-		fmt.Println("\t: Unspecified communication error, ending goroutine...")
+
+		if silent != true {
+			fmt.Println("\t: Unspecified communication error, ending goroutine...")
+		}
 		return ""
 	}
 	
 	return data
 }
 
-func (s *Server) decodeMessage(encoded []byte) Message {
+func DecodeMessage(encoded []byte) Message {
 	var err error
 	var m Message
 
@@ -106,10 +112,10 @@ func (s *Server) decodeMessage(encoded []byte) Message {
 	return m
 }
 
-func formatMessage(m Message) {
+func FormatMessage(m Message) (string, string) {
 	t := time.Now()
 	timeReceived := t.Format(time.RFC3339)
-	fmt.Print("[+] (" + timeReceived + ") " + m.ID + " " + m.Body + "\n")
+	return "[+] (" + timeReceived + ") " + m.ID + " " + m.Body + "\n", timeReceived
 }
 
 
