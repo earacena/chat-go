@@ -84,6 +84,7 @@ func main() {
 
 	if mode != "server" && mode != "client" {
 		fmt.Println("[-] Error: unrecognized response, try again... ")
+		os.Exit(1)
 	}
 	
 	defer s.listener.Close()	
