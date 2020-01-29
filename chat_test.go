@@ -1,5 +1,5 @@
 // Name of file: chat_test.go
-// Author:       Emanuel Aracena
+// Author:       Emanuel Aracena Beriguete
 // Date created: August 23, 2019
 // Description:  Unit tests for chat.go
 

@@ -1,5 +1,5 @@
 // Project: Go Chat Application (Peer-to-Peer) communication
-// Author: Emanuel Aracena
+// Author: Emanuel Aracena Beriguete
 // Date created: August 23, 2019
 // Name of file: chat.go
 // Description: Peer-to-Peer chat application using TCP.
