@@ -16,7 +16,7 @@ Emanuel Aracena Beriguete
 ## Usage
 To install:
 
-``` git clont www.github.com/earacena/chat-go.git ```
+``` git clone www.github.com/earacena/chat-go.git ```
 
 To run:
 
